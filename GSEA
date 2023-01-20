@@ -1,0 +1,56 @@
+Gene Set Enrichment Analysis: Differential expressed genes with a p-adjusted value les than 0.05  were used for GSEA
+
+#Figures 3f and Supplementary Tables 2,3, 4, 5
+
+library(vctrs)
+library(clusterProfiler)
+library(enrichplot)
+# we use ggplot2 to add x axis labels (ex: ridgeplot)
+library(ggplot2)
+
+BiocManager::install(version = "3.14")
+
+BiocManager::install("org.Mm.eg.db")
+
+# SET THE DESIRED ORGANISM HERE
+
+organism = "org.Mm.eg.db"
+BiocManager::install(organism, character.only = TRUE)
+library(organism, character.only = TRUE)
+
+# reading in data from differential expressed genes
+df = read.csv("E:/scATACseq +scRNAseq/Colaborators/Gordon Results/Combined/GO/21_CB_pvaladj.csv", header=TRUE)
+df1 = read.csv("E:/PAPER/Figures and Results/GO/21_CC_pvaladj.csv", header=TRUE)
+
+# we want the log2 fold change 
+original_gene_list <- df$log2FoldChange
+
+# name the vector
+names(original_gene_list) <- df$NAME
+
+# omit any NA values 
+gene_list<-na.omit(original_gene_list)
+
+# sort the list in decreasing order (required for clusterProfiler)
+gene_list = sort(gene_list, decreasing = TRUE)
+
+gse <- gseGO(geneList=gene_list, 
+             ont ="BP",
+             nPerm = 1000,
+             keyType = "ENSEMBL", 
+             minGSSize = 100, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = organism,
+             pAdjustMethod = "none")
+
+
+gse_cb <- (gse_cb2)
+require(DOSE)
+
+dotplot(gse, x = "NES",color = "p.adjust", showCategory=10,  split=NULL ,size=NULL, font.size = 10,
+        orderBy="p.adjust",label_format = 30) + facet_grid(.~.sign) 
+
+dotplot(gse, showCategory = gse$Description[1:10][-7], font.size = 7, orderBy="NES")+ facet_grid(.~.sign)
+gseaplot2(gse, color = "BLUE",pvalue_table = FALSE, geneSetID = 1, title = gse$Description[1], ES_geom= "line", subplots = 1:2) 

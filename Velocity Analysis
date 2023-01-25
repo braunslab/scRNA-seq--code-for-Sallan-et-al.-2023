@@ -1,1 +1,67 @@
 
+
+
+library(Seurat)
+library(velocyto.R)
+library(SeuratWrappers)
+library(dplyr)
+library(tibble)
+setwd("~/Documents/Projects/Marta")
+
+## meta (RNA)
+meta <- read.csv("./Marta_RNA_meta.csv", row.names = 1)
+meta <- meta %>% rownames_to_column("x") %>% mutate_at(vars(matches("seurat_clusters|_snn_")), as.factor) %>% column_to_rownames("x")
+
+##########################
+## RNA Velocity
+
+loom.list <- list()
+for (dir in list.dirs("./velocyto")[-1]) {
+  
+  ## Read in loom > Seurat
+  name <- gsub("./velocyto/", "", dir)
+  loom.list[[name]] <- ReadVelocity(file = paste0(dir, "/", list.files(dir)))
+  loom.list[[name]] <- as.Seurat(x = loom.list[[name]])
+  loom.list[[name]] <- RenameCells(loom.list[[name]], new.names = paste0(name, "_", gsub(".*:|x", "", colnames(loom.list[[name]])), "-1"))
+  
+  ## Add metadata
+  loom.list[[name]] <- AddMetaData(loom.list[[name]], metadata = meta)
+  loom.list[[name]]@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(meta[ ,c("UMAP_1", "UMAP_2")]), key = "UMAP_")
+  
+  ## Subset clusters oi
+  loom.list[[name]][["RNA"]] <- CreateAssayObject(data = loom.list[[name]]@assays$spliced@counts)
+  loom.list[[name]] <- subset(loom.list[[name]], subset = integrated_snn_res.0.5 %in% c(2, 4))
+  loom.list[[name]] <- subset(loom.list[[name]], subset = UMAP_2 < 0.5) %>% subset(subset = UMAP_1 > -6) %>% subset(subset = UMAP_1 < 1)
+  
+  ## Preprocess
+  loom.list[[name]] <- SCTransform(object = subset(loom.list[[name]]), assay = "spliced")
+  loom.list[[name]] <- RunPCA(object = loom.list[[name]], verbose = FALSE)
+  
+  ## run velocity
+  loom.list[[name]] <- RunVelocity(object = loom.list[[name]], deltaT = 1, kCells = 25, fit.quantile = 0.02)
+}
+
+## plot
+
+loom.list <- loom.list[c("Control", "C21", "Exp", "E21")]
+
+par(mfrow = c(2,2))
+velo.plot.list <- list()
+for (samp in names(loom.list)) {
+  Idents(loom.list[[samp]]) <- "integrated_snn_res.0.5"
+  ident.colors <- (scales::hue_pal())(n = length(x = levels(x = loom.list[[samp]])))
+  names(x = ident.colors) <- levels(x = loom.list[[samp]])
+  cell.colors <- ident.colors[Idents(object = loom.list[[samp]])]
+  names(x = cell.colors) <- colnames(x = loom.list[[samp]])
+  velo.plot.list[[samp]] <- show.velocity.on.embedding.cor(emb = Embeddings(object = loom.list[[samp]], reduction = "umap"), vel = Tool(object = loom.list[[samp]], 
+                                                                                                 slot = "RunVelocity"), n = 200, scale = "sqrt", cell.colors = ac(x = cell.colors, alpha = 0.5), 
+                                 cex = 0.8, arrow.scale = 1, show.grid.flow = T, min.grid.cell.mass = 0.5, grid.n = 30, arrow.lwd = 1, 
+                                 do.par = FALSE, cell.border.alpha = 0.1)
+  title(samp)
+  legend("topright",
+         title = "Cluster",
+         legend = levels(x = loom.list[[samp]]),
+         col = ident.colors,
+         pch = 16, )
+  
+  }

@@ -94,7 +94,7 @@ DimPlot(seu.rna, label = T, repel = T)
 
 #############################################
 ## DE by cluster/condition
-## Figure 3e
+
 
 de.clust.cond <- list()
 conds <- list(`Control/Exp` = c("Control", "Exp"),
@@ -179,7 +179,7 @@ my_plot_pseudotime_heatmap <- function(cds_subset,
 
 #############################################
 ## Call monocle2 for pseudotime and trajectory analysis
-## Figure 3g + Extended Data Figure 7(a, b, c)
+
 
 ## compared control day 10 vs experimental day 10 and so on day 21, to call for DEGs
 seu.rna.subset <- subset(x=seu.rna, idents = celltypes)

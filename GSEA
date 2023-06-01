@@ -1,6 +1,6 @@
 Gene Set Enrichment Analysis: Differential expressed genes with a p-adjusted value les than 0.05  were used for GSEA
 
-#Figures 3f and Supplementary Tables 2,3, 4, 5
+
 
 library(vctrs)
 library(clusterProfiler)
